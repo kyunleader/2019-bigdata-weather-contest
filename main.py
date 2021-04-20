@@ -51,14 +51,44 @@ x = StandardScaler().fit_transform(data.iloc[:, 5:14])
 # 주성분 분석 (PCA)
 from sklearn.decomposition import PCA
 
+# 그래프로 표현해보기
+pca = PCA()
+pca.fit(x)
+exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
+exp_var_cumul2 = pd.DataFrame(exp_var_cumul, index=range(1, exp_var_cumul.shape[0]+1))
+
+plt.ylim(0,1.2)
+sns.pointplot(data=exp_var_cumul2.T, palette='Blues_d', markers='string')
+
+# 주성분 데이터 셋 만들기
 pca = PCA(n_components=2)  # PCA 객체 생성 (2개)
 principalComponents = pca.fit_transform(x)
 principalDf = pd.DataFrame(data=principalComponents,
                            columns=['principalComponents1', 'principalComponents2'])  # 2개의 주성분이 나타내는 값
 
-# 주성분 분석이나 요인분석은 python 보다는 R이더 직관적이고 사용이 편리한 것 같다.
+# 2개의 인자들이 얼마만큼 변수를 설명 가능한지
+print(pca.explained_variance_ratio_)
 
-# 만든주성분으로 회귀분석 해보기 이후 지역별 날씨 변화 그래프로 그려보기
+# 누적 값
+print(sum(pca.explained_variance_ratio_))
+
+# 주성분 분석이나 요인분석은 python 보다는 R이 더 직관적이고 사용이 편리한 것 같다.
+
+# 지역별 날씨 변화 그래프로 그려보기
+import datetime
+data['date'] = [datetime.datetime.strptime(str(i), '%Y%m') for i in data['날짜']]
+
+# 평균기온
+sns.lineplot(x = 'date', y = data.columns[5], data = data, hue='시도지역')
+
+# 평균일교차
+sns.lineplot(x = 'date', y = data.columns[8], data = data, hue='시도지역')
+
+# 평균상대습도
+sns.lineplot(x = 'date', y = data.columns[9], data = data, hue='시도지역')
+
+
+
 
 
 
