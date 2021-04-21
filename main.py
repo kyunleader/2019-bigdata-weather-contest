@@ -55,9 +55,9 @@ from sklearn.decomposition import PCA
 pca = PCA()
 pca.fit(x)
 exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
-exp_var_cumul2 = pd.DataFrame(exp_var_cumul, index=range(1, exp_var_cumul.shape[0]+1))
+exp_var_cumul2 = pd.DataFrame(exp_var_cumul, index=range(1, exp_var_cumul.shape[0] + 1))
 
-plt.ylim(0,1.2)
+plt.ylim(0, 1.2)
 sns.pointplot(data=exp_var_cumul2.T, palette='Blues_d', markers='string')
 
 # 주성분 데이터 셋 만들기
@@ -76,19 +76,60 @@ print(sum(pca.explained_variance_ratio_))
 
 # 지역별 날씨 변화 그래프로 그려보기
 import datetime
+
 data['date'] = [datetime.datetime.strptime(str(i), '%Y%m') for i in data['날짜']]
 
 # 평균기온
-sns.lineplot(x = 'date', y = data.columns[5], data = data, hue='시도지역')
+sns.lineplot(x='date', y=data.columns[5], data=data, hue='시도지역')
 
 # 평균일교차
-sns.lineplot(x = 'date', y = data.columns[8], data = data, hue='시도지역')
+sns.lineplot(x='date', y=data.columns[8], data=data, hue='시도지역')
 
 # 평균상대습도
-sns.lineplot(x = 'date', y = data.columns[9], data = data, hue='시도지역')
+sns.lineplot(x='date', y=data.columns[9], data=data, hue='시도지역')
+
+# 환경요인들로 회귀분석 해보기
+
+# x요인들과 y값 그리고 교호작용만 갖는 데이터 셋 만들기
+
+principalDf['pr1*pr2'] = principalDf['principalComponents1'] * principalDf['principalComponents2']
+
+regression_d = pd.concat([principalDf, data['시도지역'], data['발생건수(건)']], axis=1)
+regression_data = pd.get_dummies(regression_d)
+
+x_var = regression_data.iloc[:, [0, 1, 2, 4, 5, 6, 7, 8, 9]]
+y_var = pd.DataFrame(regression_data.iloc[:, 3])
+
+import statsmodels.api as sm
+
+model = sm.OLS(y_var, x_var)
+fit_model = model.fit()
+fit_model.summary()
+
+# 다중공선성 확인 하기
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+vif = pd.DataFrame()
+vif["VIF Factor"] = [variance_inflation_factor(x_var.values, i) for i in range(x_var.shape[1])]
+vif["features"] = x_var.columns
+print(vif)
+
+# 학습 검증데이터 분할
+from sklearn.model_selection import train_test_split
+
+train_x, test_x, train_y, test_y = train_test_split(x_var,y_var, train_size = 0.7, test_size = 0.3, random_state = 1)
+
+
+# 시각화 및 마무리 하기
 
 
 
+# MSE 확인하기
+from sklearn.metrics import mean_squared_error
+mse = mean_squared_error(y_true = test_y['발생건수(건)'], y_pred = fit_model.predict(test_x))
 
+import math
+print(math.sqrt(mse))
 
+test = pd.concat([test_y['발생건수(건)'], fit_model.predict(test_x)], axis=1)
 
