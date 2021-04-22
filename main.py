@@ -58,7 +58,7 @@ exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
 exp_var_cumul2 = pd.DataFrame(exp_var_cumul, index=range(1, exp_var_cumul.shape[0] + 1))
 
 plt.ylim(0, 1.2)
-sns.pointplot(data=exp_var_cumul2.T, palette='Blues_d', markers='string')
+sns.pointplot(data=exp_var_cumul2.T, palette='Blues_d')
 
 # 주성분 데이터 셋 만들기
 pca = PCA(n_components=2)  # PCA 객체 생성 (2개)
@@ -99,12 +99,17 @@ regression_data = pd.get_dummies(regression_d)
 
 x_var = regression_data.iloc[:, [0, 1, 2, 4, 5, 6, 7, 8, 9]]
 y_var = pd.DataFrame(regression_data.iloc[:, 3])
+y_var = regression_data.iloc[:, 3]
+# 학습 검증데이터 분할
+from sklearn.model_selection import train_test_split
+
+train_x, test_x, train_y, test_y = train_test_split(x_var, y_var, train_size=0.7, test_size=0.3, random_state=1)
 
 import statsmodels.api as sm
 
-model = sm.OLS(y_var, x_var)
-fit_model = model.fit()
-fit_model.summary()
+regression_model = sm.OLS(y_var, x_var)
+regression_fit_model = regression_model.fit()
+regression_fit_model.summary()
 
 # 다중공선성 확인 하기
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -114,22 +119,57 @@ vif["VIF Factor"] = [variance_inflation_factor(x_var.values, i) for i in range(x
 vif["features"] = x_var.columns
 print(vif)
 
-# 학습 검증데이터 분할
-from sklearn.model_selection import train_test_split
-
-train_x, test_x, train_y, test_y = train_test_split(x_var,y_var, train_size = 0.7, test_size = 0.3, random_state = 1)
-
-
-# 시각화 및 마무리 하기
-
-
 
 # MSE 확인하기
 from sklearn.metrics import mean_squared_error
-mse = mean_squared_error(y_true = test_y['발생건수(건)'], y_pred = fit_model.predict(test_x))
 
+mse = mean_squared_error(y_true=test_y['발생건수(건)'], y_pred=regression_fit_model.predict(test_x))
+
+# 예측값과 차이 알아보기 test = pd.concat([test_y['발생건수(건)'], regression_fit_model.predict(test_x)], axis=1)
+
+# 다른 방법으로 예측해보기
+
+# 1. random forest
+
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV  # gridsearch : 내가 지정한 몇가지 파라미터에서 최적의 파라미터를 찾아줌
+
+estimator = RandomForestRegressor(random_state=486)
+estimator.get_params().keys()  # 랜덤 포레스트의 파라미터들
+
+param_grid = {'n_estimators' : range(5, 50),  # 보통 10개 내외, 높은수록 시간 오래 걸림
+              'min_samples_split' : [6, 8 , 10, 12, 14],
+              # 노드를 분할하기 위한 최소한의 샘플 데이터 수, 과적합을 제어하는데 사용, 디폴트 2, 작게 설정할 수록 과적합 가능성 증가
+              'min_samples_leaf' : [8, 12, 16, 20],
+              # 리프노드가 되기 위해 필요한 최소한의 샘플 데이터 수, 과적합 제어, 불균형 데이터의 경우 작게 설정 필요
+              'max_depth' : [4, 6, 8, 10, 12]  # 트리의 최대 깊이, 디폴트 none, 깊이 깊어지면 과적학 가능성 있음
+              }
+
+grid = GridSearchCV(estimator, param_grid=param_grid, cv=5, n_jobs=-1)
+# cv = kfold, n_job = 쓰레드수?(정확하지 않음) -1이면 최대로 사용 컴퓨터 부하 심할수도
+grid.fit(train_x, train_y)
+print(grid.best_params_)  # best 파라미터 출력
+
+# 랜덤 포레스트 모델 만들기
+rf_model = RandomForestRegressor(n_estimators=17,
+                                 max_depth=8,
+                                 min_samples_split=6,
+                                 min_samples_leaf=8,
+                                 n_jobs=-1)  # 하이퍼 파라미터대로 설정
+rf_model.fit(train_x, train_y)
+pred1 = rf_model.predict(test_x)
+
+
+# mse 측정
 import math
-print(math.sqrt(mse))
+mse_rf = mean_squared_error(y_true=test_y, y_pred=pred1)
+mse_rf
+math.sqrt(mse_rf)
 
-test = pd.concat([test_y['발생건수(건)'], fit_model.predict(test_x)], axis=1)
+# 실제값과 예측값 흐름 시각화 하기
+test = pd.concat([test_x.reset_index(), test_y.reset_index(), pd.Series(pred1, name='predict')], axis=1)
+f, ax = plt.subplots(1, 1)
+sns.lineplot(x=test.index, y='predict', data=test, ax=ax)
+ax.legend(handles = ax.lines[::len(test)+1], labels = ['predict', '발생건수'])
+sns.lineplot(x=test.index, y='발생건수(건)', data=test, ax=ax)
 
