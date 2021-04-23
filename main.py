@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import font_manager, rc
-import matplotlib
+
 
 font_name = font_manager.FontProperties(fname='C:/Windows/Fonts/H2HDRM.TTF').get_name()
 rc('font', family=font_name)
@@ -166,10 +168,38 @@ mse_rf = mean_squared_error(y_true=test_y, y_pred=pred1)
 mse_rf
 math.sqrt(mse_rf)
 
-# 실제값과 예측값 흐름 시각화 하기
-test = pd.concat([test_x.reset_index(), test_y.reset_index(), pd.Series(pred1, name='predict')], axis=1)
-f, ax = plt.subplots(1, 1)
-sns.lineplot(x=test.index, y='predict', data=test, ax=ax)
-ax.legend(handles = ax.lines[::len(test)+1], labels = ['predict', '발생건수'])
-sns.lineplot(x=test.index, y='발생건수(건)', data=test, ax=ax)
+# 실제값과 예측값 흐름 시각화 하기 (matplotlib 이용)
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+plt.plot(np.arange(98), test['predict'], label='predict')
+plt.plot(np.arange(98), test['발생건수(건)'], label='발생건수')
+plt.legend()
+
+# support vector machine 사용해보기
+
+from sklearn.svm import LinearSVR
+
+# 최적 파라미터 찾기
+svm_model = LinearSVR(random_state=486)
+svm_model.get_params().keys()  # svm의 파라미터들
+
+param_grid_svm = {'C' : [1, 10, 100, 1000, 10000, 20000, 50000, 100000],
+                  'epsilon' : [0.1, 0.5, 1, 1.25, 1.5, 1.75, 2]}
+
+grid_svm = GridSearchCV(svm_model, param_grid = param_grid_svm, cv=5)
+grid_svm.fit(train_x, train_y)
+print(grid_svm.best_params_)  # best 파라미터 출력
+
+
+
+svm_model = LinearSVR(C=50000, random_state=486, epsilon=1.75)
+svm_model.fit(train_x, train_y)
+pred_svm = svm_model.predict(test_x)
+
+plt.plot(np.arange(98), pred_svm, label='predict')
+plt.plot(np.arange(98), test['발생건수(건)'], label='발생건수')
+plt.legend()  # 실제값과 비교해보기
+
+
+
 
