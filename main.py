@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import font_manager, rc
@@ -23,6 +22,7 @@ sns.clustermap(data_corr,
                cmap='RdYlBu_r',  # Red, Yellow, Blue 로 색상 표시
                vmin=-1, vmax=1  # 컬러차트 -1 ~ 1 범위로 표시
                )
+
 
 # 삼각형으로 상관관계 그리기
 # 그림 사이즈 지정
@@ -169,8 +169,7 @@ mse_rf
 math.sqrt(mse_rf)
 
 # 실제값과 예측값 흐름 시각화 하기 (matplotlib 이용)
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+
 plt.plot(np.arange(98), test['predict'], label='predict')
 plt.plot(np.arange(98), test['발생건수(건)'], label='발생건수')
 plt.legend()
