@@ -112,6 +112,13 @@ import statsmodels.api as sm
 regression_model = sm.OLS(y_var, x_var)
 regression_fit_model = regression_model.fit()
 regression_fit_model.summary()
+pred1 = regression_fit_model.predict(test_x)
+
+plt.figure()
+plt.plot(np.arange(98), pred1, label='predict')
+plt.plot(np.arange(98), test_y, label='발생건수')
+plt.legend()
+
 
 # 다중공선성 확인 하기
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -122,12 +129,15 @@ vif["features"] = x_var.columns
 print(vif)
 
 
+
 # MSE 확인하기
 from sklearn.metrics import mean_squared_error
 
-mse = mean_squared_error(y_true=test_y['발생건수(건)'], y_pred=regression_fit_model.predict(test_x))
+mse = mean_squared_error(y_true=test_y, y_pred=regression_fit_model.predict(test_x))
 
-# 예측값과 차이 알아보기 test = pd.concat([test_y['발생건수(건)'], regression_fit_model.predict(test_x)], axis=1)
+
+
+# 예측값과 차이 알아보기 test = pd.concat([test_y, regression_fit_model.predict(test_x)], axis=1)
 
 # 다른 방법으로 예측해보기
 
@@ -170,9 +180,11 @@ math.sqrt(mse_rf)
 
 # 실제값과 예측값 흐름 시각화 하기 (matplotlib 이용)
 
-plt.plot(np.arange(98), test['predict'], label='predict')
-plt.plot(np.arange(98), test['발생건수(건)'], label='발생건수')
+plt.figure()
+plt.plot(np.arange(98), pred1, label='predict')
+plt.plot(np.arange(98), test_y, label='발생건수')
 plt.legend()
+
 
 # support vector machine 사용해보기
 
@@ -195,8 +207,9 @@ svm_model = LinearSVR(C=50000, random_state=486, epsilon=1.75)
 svm_model.fit(train_x, train_y)
 pred_svm = svm_model.predict(test_x)
 
+plt.figure()
 plt.plot(np.arange(98), pred_svm, label='predict')
-plt.plot(np.arange(98), test['발생건수(건)'], label='발생건수')
+plt.plot(np.arange(98), test_y, label='발생건수')
 plt.legend()  # 실제값과 비교해보기
 
 
